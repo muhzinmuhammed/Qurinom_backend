@@ -1,5 +1,6 @@
 import userModel from "../model/userModel.js";
 import bcrypt from "bcryptjs";
+import generateToken from "../utils/genrateToken.js";
 
 // Regex patterns for validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Basic email format validation
@@ -73,8 +74,16 @@ const userLogin = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
+        const token = generateToken(user._id);
 
-        return res.status(200).json({ message: "Login successful" });
+        return res.json({
+            _id: user._id,
+            name: user.name,
+            //phone: user.userPhone,
+            email: user.userEmail,
+           
+            token,
+          });
     } catch (error) {
         console.error("Login error:", error.message);
         return res.status(500).json({ message: "Internal server error" });
