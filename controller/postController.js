@@ -27,9 +27,29 @@ const createPost = async (req, res) => {
 
 // get all posts
 const getAllPosts = async (req, res) => {
+    const { page = 1, limit = 10, search = "" } = req.query;
+
     try {
-        const posts = await postModel.find();
-        res.status(200).json({data:posts,
+        const query = {
+            isDelete: false,
+            $or: [
+                { title: { $regex: search, $options: "i" } },
+                { content: { $regex: search, $options: "i" } }
+            ]
+        };
+
+        const totalPosts = await postModel.countDocuments(query);
+        const totalPages = Math.ceil(totalPosts / limit);
+        const posts = await postModel.find(query)
+            .populate({ path: 'userId', select: '-password' })
+            .skip((page - 1) * limit)
+            .limit(Number(limit));
+
+        res.status(200).json({
+            data: posts,
+            currentPage: page,
+            totalPages: totalPages,
+            totalPosts: totalPosts,
             message: "Posts fetched successfully",
             error: false
         });
@@ -46,8 +66,12 @@ const getAllPosts = async (req, res) => {
 // get post by id
 const getPostById = async (req, res) => {
     const { id } = req.params;
+    console.log(id);
+    
     try {
-        const post = await postModel.find({userId:id}).where('isDelete').equals(false);
+        const post = await postModel.find({userId:id}).where({isDelete:false});
+       
+        
         res.status(200).json({data:post,
             message: "Post fetched successfully",
             error: false
@@ -64,13 +88,18 @@ const getPostById = async (req, res) => {
 //edit post
 const editPost = async (req, res) => {
     const { id } = req.params;
+    console.log(req.body);
+    
     const { title, content } = req.body;
+    console.log(title, content);
+    
     try {
         const updatedPost = await postModel.findByIdAndUpdate(
             id,
             { title, content },
             { new: true }
         );
+
         if (!updatedPost) {
             return res.status(404).json({
                 message: "Post not found",
